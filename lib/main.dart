@@ -1,13 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final title = 'WebSocket Demo';
+    final title = 'WebSocket';
     return MaterialApp(
       title: title,
       home: MyHomePage(
@@ -30,9 +32,8 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final TextEditingController _controller = TextEditingController();
   final _channel = WebSocketChannel.connect(
-    Uri.parse('wss://echo.websocket.org'),
+    Uri.parse('wss://miniproject-msrit.herokuapp.com/ws2'),
   );
 
   @override
@@ -43,37 +44,46 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Form(
-              child: TextFormField(
-                controller: _controller,
-                decoration: InputDecoration(labelText: 'Send a message'),
-              ),
-            ),
-            SizedBox(height: 24),
-            StreamBuilder(
-              stream: _channel.stream,
-              builder: (context, snapshot) {
-                print(snapshot.hasData ? '${snapshot.data}' : 'NoData');
-                return Text(snapshot.hasData ? '${snapshot.data}' : '');
-              },
-            )
-          ],
+        child: StreamBuilder(
+          stream: _channel.stream,
+          builder: (context, snapshot) {
+            if (snapshot.data != null) {
+              final response = jsonDecode(snapshot.data.toString());
+              print(response['MOSFET_TEMP']);
+              //'MOSFET_TEMP' 'SPEED' 'BATTERY' 'DISTANCE' 'FAULT_CODE'
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Text('Mosfet temp is : ${response['MOSFET_TEMP']}'),
+                  Text('Speed is : ${response['SPEED']}'),
+                  Text('Battery is : ${response['BATTERY']}'),
+                  Text('Distance is : ${response['DISTANCE']}'),
+                  Text('Fault code is : ${response['FAULT_CODE']}'),
+                ],
+              );
+            } else {
+              return Text("Hello");
+            }
+          },
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _sendMessage,
         tooltip: 'Send message',
         child: Icon(Icons.send),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      ),
     );
   }
 
   void _sendMessage() {
-    if (_controller.text.isNotEmpty) {
-      _channel.sink.add(_controller.text);
+    _channel.sink.add('yes');
+  }
+
+  Future<void> getText() async {
+    for (int i = 0; i < 5; i++) {
+      var url = Uri.parse('https://miniproject-msrit.herokuapp.com/');
+      var response = await http.get(url);
+      print(response.body.toString());
     }
   }
 
